@@ -1,5 +1,3 @@
-module Rpar1 where
-
 import Helper
 
 g :: (Integer, Integer)
@@ -8,4 +6,5 @@ g = runEval $
     rpar (fib 30) >>= \b ->
     return (a, b)
 
+main :: IO ()
 main = mainHelper g

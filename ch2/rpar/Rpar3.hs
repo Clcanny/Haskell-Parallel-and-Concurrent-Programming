@@ -1,5 +1,3 @@
-module Rpar3 where
-
 import Helper
 
 g :: (Integer, Integer)

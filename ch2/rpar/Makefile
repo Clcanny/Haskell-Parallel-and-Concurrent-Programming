@@ -1,5 +1,4 @@
-object = Rpar1
-core = 1
+object = Rpar4
 
 clean :
 	- rm $(object).hi
@@ -8,8 +7,9 @@ clean :
 	- rm Helper.o
 	- rm $(object)
 
-compile : $(object).hs Helper.hs
-	ghc -O2 $(object).hs -threaded
+compile : clean $(object).hs Helper.hs
+	ghc -O2 $(object).hs Helper.hs -threaded -rtsopts
 
 run : compile
-	./$(object) +RTS -N$(core)
+	./$(object) +RTS -N1
+	./$(object) +RTS -N2
