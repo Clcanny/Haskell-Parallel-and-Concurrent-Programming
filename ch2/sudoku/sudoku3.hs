@@ -11,7 +11,10 @@ main = do
   file <- readFile f
 
   let puzzles   = lines file
+      -- unuse = evaluate (length puzzles)
       solutions = runEval (parMap solve puzzles)
+  
+  -- evaluate (length puzzles)
 
   print (length (filter isJust solutions))
 -- >>

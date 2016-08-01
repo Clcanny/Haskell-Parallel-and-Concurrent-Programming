@@ -1,4 +1,4 @@
-object = sudoku2
+object = sudoku3
 core = 2
 
 clean :
@@ -16,4 +16,4 @@ run : compile
 	./$(object) sudoku17.1000.txt +RTS -s -N$(core) -l
 
 analyse : run
-	threadscope sudoku2.eventlog
+	threadscope $(object).eventlog
