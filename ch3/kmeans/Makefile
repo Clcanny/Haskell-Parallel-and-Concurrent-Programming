@@ -1,31 +1,27 @@
-GHC = ghc
-GHC_OPTS = -O2 -threaded -rtsopts
+GenSamples : GenSamples.hs
+	ghc -O2 GenSamples.hs
 
-all : points.bin
-
-kmeans : kmeans.hs KMeansCore.hs
-	$(GHC) $(GHC_OPTS) kmeans
-
-GenSamples : GenSamples.hs KMeansCore.hs
-	$(GHC) $(GHC_OPTS) GenSamples
-
-points : GenSamples
+points.bin : GenSamples
 	./GenSamples 5 50000 100000 1010
 
-points.bin : points
+compile : clean
+	ghc -O2 -threaded -rtsopts -eventlog kmeans.hs
 
-view : points
-	gnuplot -e 'set terminal png; plot "points"' >points.png; eog points.png    
+runSeq : compile points.bin
+	./kmeans seq
 
 clean :
-	- rm KMeansCore.hi
-	- rm KMeansCore.o
 	- rm GenSamples.hi
 	- rm GenSamples.o
+	- rm GenSamples
+	- rm KMeansCore.hi
+	- rm KMeansCore.o
 	- rm kmeans.hi
 	- rm kmeans.o
+	- rm kmeans
 	- rm Random.hi
 	- rm Random.o
-	- rm kmeans
-	- rm GenSamples
 	- rm points
+	- rm points.bin
+	- rm clusters
+	- rm params
