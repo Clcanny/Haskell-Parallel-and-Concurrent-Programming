@@ -2,14 +2,18 @@ clean :
 	- rm Main.hi
 	- rm Main.o
 	- rm Main
-	- rm KMeansSeq.hi
-	- rm KMeansSeq.o
+	- rm KMeansList.hi
+	- rm KMeansList.o
+	- rm KMeansVector.hi
+	- rm KMeansVector.o
+	- rm KMeansVector2.hi
+	- rm KMeansVector2.o
 	- rm clusters
 	- rm points.bin
 	- rm params
 	- rm points
 
-compile : clean Main.hs KMeansSeq.hs
+compile : clean Main.hs KMeansList.hs KMeansVector.hs
 	ghc -O2 Main.hs
 
 points.bin :

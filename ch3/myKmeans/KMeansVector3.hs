@@ -1,4 +1,4 @@
-module KMeansVector where
+module KMeansVector2 where
 
 import Data.List (minimumBy)
 import Control.DeepSeq (NFData, rnf)
@@ -36,8 +36,8 @@ sqDistance :: Point -> Point -> Double
 sqDistance (Point x1 y1) (Point x2 y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
 data Cluster = Cluster {
-    clId :: Int,
-    clCent :: Point
+    clId :: !Int,
+    clCent :: !Point
 } deriving (Show, Read, Eq)
 
 data PointSum = PointSum !Int !Double !Double
@@ -54,25 +54,20 @@ addToPointSum (Point x y) (PointSum count xs ys) = PointSum (count + 1) (xs + x)
 pointSumToCluster :: Int -> PointSum -> Cluster
 pointSumToCluster i (PointSum count xs ys) = Cluster i $ Point (xs / fromIntegral count) (ys / fromIntegral count)
 
-nearest :: [Cluster] -> Point -> Cluster
-nearest clusters p = fst $ minimumBy (compare `on` snd)
-    [ (c, sqDistance (clCent c) p) | c <- clusters ]
+assign :: Int -> [Cluster] -> [Point] -> Vector PointSum
+assign nclusters clusters points = Vector.create $ do
+    vec <- MVector.replicate nclusters (PointSum 0 0 0)
+    let
+        addpoint p = do
+          let c = nearest p; cid = clId c
+          ps <- MVector.read vec cid
+          MVector.write vec cid $! addToPointSum ps p
 
-addpoint p cs vec = MVector.read vec cid >>= \ps -> MVector.write vec cid $ addToPointSum p ps
-    where c = nearest cs p
-          cid = clId c
-
-assign clusters (p : ps) vec = 
-    addpoint p clusters vec >>
-    assign clusters ps vec >>
+    mapM_ addpoint points
     return vec
-assign _ [] vec = return vec
-
-assign' :: Int -> [Cluster] -> [Point] -> Vector PointSum
-assign' nclusters clusters points = Vector.create $
-    MVector.replicate nclusters (zeroPointSum) >>= \vec ->
-    assign clusters points vec >>
-    return vec
+ where
+  nearest p = fst $ minimumBy (compare `on` snd)
+                        [ (c, sqDistance (clCent c) p) | c <- clusters ]
 
 makeNewClusters :: Vector PointSum -> [Cluster]
 makeNewClusters vec =
@@ -82,7 +77,7 @@ makeNewClusters vec =
     ]
 
 step :: Int -> [Cluster] -> [Point] -> [Cluster]
-step nclusters clusters points = makeNewClusters (assign' nclusters clusters points)
+step nclusters clusters points = makeNewClusters (assign nclusters clusters points)
 
 kmeans_seq :: Int -> [Point] -> [Cluster] -> IO [Cluster]
 kmeans_seq nclusters points clusters =

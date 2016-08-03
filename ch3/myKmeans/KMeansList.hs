@@ -1,4 +1,4 @@
-module KMeansSeq where
+module KMeansList where
 
 import Data.List (minimumBy)
 import Control.DeepSeq (NFData, rnf)

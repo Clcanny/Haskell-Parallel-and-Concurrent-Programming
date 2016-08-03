@@ -1,5 +1,5 @@
 import Data.Binary (decodeFile)
-import KMeansSeq
+import KMeansVector2
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Text.Printf (printf)
 import Control.Exception (evaluate)

@@ -1,4 +1,4 @@
-module KMeansVector where
+module KMeansVector2 where
 
 import Data.List (minimumBy)
 import Control.DeepSeq (NFData, rnf)
@@ -36,8 +36,8 @@ sqDistance :: Point -> Point -> Double
 sqDistance (Point x1 y1) (Point x2 y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
 data Cluster = Cluster {
-    clId :: Int,
-    clCent :: Point
+    clId :: !Int,
+    clCent :: !Point
 } deriving (Show, Read, Eq)
 
 data PointSum = PointSum !Int !Double !Double
@@ -58,7 +58,7 @@ nearest :: [Cluster] -> Point -> Cluster
 nearest clusters p = fst $ minimumBy (compare `on` snd)
     [ (c, sqDistance (clCent c) p) | c <- clusters ]
 
-addpoint p cs vec = MVector.read vec cid >>= \ps -> MVector.write vec cid $ addToPointSum p ps
+addpoint p cs vec = MVector.read vec cid >>= \ps -> MVector.write vec cid $! addToPointSum p ps
     where c = nearest cs p
           cid = clId c
 
