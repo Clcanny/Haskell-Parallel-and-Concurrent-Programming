@@ -8,6 +8,12 @@ clean :
 	- rm KMeansVector.o
 	- rm KMeansVector2.hi
 	- rm KMeansVector2.o
+	- rm KMeansVector3.hi
+	- rm KMeansVector3.o
+	- rm KMeansVector4.hi
+	- rm KMeansVector4.o
+	- rm KMeans5.hi
+	- rm KMeans5.o
 	- rm clusters
 	- rm points.bin
 	- rm params
