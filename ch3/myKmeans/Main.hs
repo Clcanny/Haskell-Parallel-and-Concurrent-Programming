@@ -1,5 +1,6 @@
 import Data.Binary (decodeFile)
-import KMeansVector4
+-- import KMeansVector4
+import KMeans5
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Text.Printf (printf)
 import Control.Exception (evaluate)
