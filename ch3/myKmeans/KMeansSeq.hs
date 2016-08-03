@@ -1,3 +1,5 @@
+module KMeansSeq where
+
 import Data.List (minimumBy)
 import Control.DeepSeq (NFData, rnf)
 import Data.Binary (Binary)
@@ -51,25 +53,25 @@ pointSumToCluster i (PointSum count xs ys) = Cluster i $ Point (xs / fromIntegra
 
 at :: [a] -> Int -> Maybe a
 at (x : xs) n
-    | n > 1 = at xs (n - 1)
-    | n == 1 = Just x
-    | n < 1 = Nothing
+    | n > 0 = at xs (n - 1)
+    | n == 0 = Just x
+    | n < 0 = Nothing
 at [] _ = Nothing
 
 replaceAt :: [a] -> Int -> a -> Maybe [a]
 replaceAt (x : xs) n y
-    | n > 1 = 
+    | n > 0 = 
         replaceAt xs (n - 1) y >>= \ys -> Just (x : ys)
-    | n == 1 = Just (y : xs)
-    | n < 1 = Nothing
+    | n == 0 = Just (y : xs)
+    | n < 0 = Nothing
 replaceAt [] _ _ = Nothing
 
 fAt :: [a] -> Int -> (a -> a) -> Maybe [a]
 fAt (x : xs) n f
-    | n > 1 = 
+    | n > 0 = 
         fAt xs (n - 1) f >>= \ys -> Just (x : ys)
-    | n == 1 = Just (f x : xs)
-    | n < 1 = Nothing
+    | n == 0 = Just (f x : xs)
+    | n < 0 = Nothing
 fAt [] _ _ = Nothing
 
 nearest :: [Cluster] -> Point -> Cluster
