@@ -17,3 +17,6 @@ points.bin :
 
 run : compile points.bin
 	./Main
+
+analyse : compile points.bin
+	./Main +RTS -s

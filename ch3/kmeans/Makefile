@@ -10,6 +10,9 @@ compile : clean
 runSeq : compile points.bin
 	./kmeans seq
 
+analyseSeq : compile points.bin
+	./kmeans seq +RTS -s
+
 clean :
 	- rm GenSamples.hi
 	- rm GenSamples.o
