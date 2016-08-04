@@ -11,17 +11,14 @@ import Control.DeepSeq (NFData, force)
 rdeepseq :: NFData a => a -> Eval a
 rdeepseq = rseq . force
 
--- evalList :: Strategy a -> Strategy [a]
-evalList :: (a -> Eval a) -> [a] -> Eval [a]
-evalList strat [] = return []
-evalList strat (x : xs) =
-    strat x >>= \x' ->
-    evalList strat xs >>= \xs' ->
-    return (x' : xs')
-
 -- parList :: Strategy a -> Strategy [a]
-parList :: (a -> Eval a) -> [a] -> Eval [a]
-parList strat = evalList (rparWith strat)
+parList strat xs = do
+        go xs
+        return xs
+    where
+        go [] = return ()
+        go (x:xs) = do rparWith strat x
+                       go xs
 
 parMap :: NFData b => (a -> b) -> [a] -> [b]
 parMap f xs = map f xs `using` parList rdeepseq

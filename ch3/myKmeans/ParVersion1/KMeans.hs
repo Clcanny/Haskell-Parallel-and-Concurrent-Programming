@@ -107,11 +107,8 @@ kmeans_strat numChunks nclusters points clusters =
     let chunks = split numChunks points
         loop :: Int -> [Cluster] -> IO [Cluster]
         loop n clusters | n > tooMany = do
-            putStrLn "giving up."
             return clusters
         loop n clusters = do
-            printf "iteration %d\n" n
-            putStr (unlines (map show clusters))
             let clusters' = parSteps_strat nclusters clusters chunks
             if clusters' == clusters
                 then return clusters
