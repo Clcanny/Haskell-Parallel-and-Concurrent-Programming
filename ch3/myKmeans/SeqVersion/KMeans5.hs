@@ -54,6 +54,13 @@ addToPointSum (Point x y) (PointSum count xs ys) = PointSum (count + 1) (xs + x)
 pointSumToCluster :: Int -> PointSum -> Cluster
 pointSumToCluster i (PointSum count xs ys) = Cluster i $ Point (xs / fromIntegral count) (ys / fromIntegral count)
 
+mapM_' :: (Monad m) => (a -> m b) -> [a] -> m ()
+mapM_' f (x : xs) = f x >> mapM_' f xs
+mapM_' f [] = return ()
+
+mapM_'' :: (Monad m) => (a -> m b) -> [a] -> m ()
+mapM_'' f = foldr ((>>) . f) (return ())
+
 assign :: Int -> [Cluster] -> [Point] -> Vector PointSum
 assign nclusters clusters points = Vector.create $ do
         vec <- MVector.replicate nclusters (zeroPointSum)
@@ -61,7 +68,7 @@ assign nclusters clusters points = Vector.create $ do
                 let c = nearest p; cid = clId c
                 ps <- MVector.read vec cid
                 MVector.write vec cid $! addToPointSum p ps
-        mapM_ addpoint points
+        mapM_'' addpoint points
         return vec
     where
         nearest p = fst $ minimumBy (compare `on` snd) [ (c, sqDistance (clCent c) p) | c <- clusters ]
