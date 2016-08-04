@@ -10,16 +10,14 @@ clean :
 	- rm points.bin
 	- rm params
 	- rm points
+	- rm Main.eventlog
 
 compile : clean Main.hs KMeans.hs 
-	ghc -O2 Main.hs -threaded -rtsopts
+	ghc -O2 Main.hs -threaded -rtsopts -eventlog
 
 points.bin :
 	./GenSamples 5 50000 100000 1010
 
-run : compile points.bin
-	./Main
-
 analyse : compile points.bin
-	./Main 64 +RTS -s -N1
-	./Main 64 +RTS -s -N2
+	./Main 64 +RTS -l -N4
+	threadscope Main.eventlog
