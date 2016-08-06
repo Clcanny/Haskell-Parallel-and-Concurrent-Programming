@@ -1,4 +1,11 @@
-module TwoDimVec where
+module TwoDimVecImp1 (
+      PrimMonad'
+    , MTDMVector
+    , constVec
+    , read
+    , write
+    , toList'
+) where
 
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -13,6 +20,7 @@ type PrimMonad' = IO
 type MVector' a = MVector (PrimState PrimMonad') a
 -- MMVector = MonadMVector
 type MMVector a = PrimMonad' (MVector' a)
+type MTDMVector a = MMVector a
 
 constVec :: Int -> Int -> Int -> MMVector Int
 constVec col row a = 
