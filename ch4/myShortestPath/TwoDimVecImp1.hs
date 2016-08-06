@@ -16,36 +16,46 @@ import Prelude hiding (read)
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad.Primitive (PrimMonad, PrimState)
 
+data MixType a = MaxRow Int | Elem a
+
+unsafeGetMaxRow :: MixType a -> Int
+unsafeGetMaxRow (MaxRow i) = i
+
+unsafeGetElem :: MixType a -> a
+unsafeGetElem (Elem a) = a
+
 type PrimMonad' = IO
 type MVector' a = MVector (PrimState PrimMonad') a
 -- MMVector = MonadMVector
 type MMVector a = PrimMonad' (MVector' a)
-type MTDMVector a = MMVector a
+type MTDMVector a = MMVector (MixType a)
 
-constVec :: Int -> Int -> Int -> MMVector Int
+constVec :: Int -> Int -> a -> MTDMVector a
 constVec col row a = 
-    MVector.replicate (col * row + 1) a >>= \vec ->
-    MVector.write vec 0 row >>
+    MVector.replicate (col * row + 1) (Elem a) >>= \vec ->
+    MVector.write vec 0 (MaxRow row) >>
     return vec
 
-read :: MVector' Int -> Int -> Int -> PrimMonad' Int
-read vec col row = MVector.read vec realIndex
+read :: MVector' (MixType a) -> Int -> Int -> PrimMonad' a
+read vec col row = 
+        MVector.read vec realIndex >>= \res' ->
+        return (unsafeGetElem res')
     where
-        rowMax = unsafePerformIO (MVector.read vec 0)
+        rowMax = unsafeGetMaxRow $ unsafePerformIO (MVector.read vec 0)
         realIndex = (col - 1) * rowMax + row
 
-write :: MVector' Int -> Int -> Int -> Int -> PrimMonad' ()
-write vec col row a = MVector.write vec realIndex a
+write :: MVector' (MixType a) -> Int -> Int -> a -> PrimMonad' ()
+write vec col row a = MVector.write vec realIndex (Elem a)
     where
-        rowMax = unsafePerformIO (MVector.read vec 0)
+        rowMax = unsafeGetMaxRow $ unsafePerformIO (MVector.read vec 0)
         realIndex = (col - 1) * rowMax + row
 
-toList :: MVector' Int -> Int -> [Int] -> [Int]
+toList :: MVector' (MixType a) -> Int -> [a] -> [a]
 toList vec n list
     | n < 0 = list
-    | otherwise = toList vec (n - 1) (unsafePerformIO (MVector.read vec n) : list)
+    | otherwise = toList vec (n - 1) (unsafeGetElem (unsafePerformIO (MVector.read vec n)) : list)
 
-toListHelper :: MVector' Int ->  Int -> [[Int]] -> [[Int]]
+toListHelper :: MVector' (MixType a) ->  Int -> [[a]] -> [[a]]
 toListHelper vec len list
     | vecLen == 0 = list
     | otherwise = toListHelper headPart len (toList tailPart (len - 1) [] : list)
@@ -54,36 +64,19 @@ toListHelper vec len list
         start = vecLen - len
         (headPart, tailPart) = MVector.splitAt start vec
 
-toList' :: MVector' Int -> [[Int]]
+toList' :: MVector' (MixType a) -> [[a]]
 toList' vec = toListHelper other first' []
     where
         (first, other) = MVector.splitAt 1 vec
-        first' = unsafePerformIO (MVector.read first 0)
+        first' = unsafeGetMaxRow $ unsafePerformIO (MVector.read first 0)
 
 -- test
-xs = constVec 4 3 0
-x = xs >>= \xs' -> write xs' 1 1 6 >> read xs' 1 1 -- yes
-y = xs >>= \xs' -> read xs' 1 1 -- no
-ys = xs >>= \xs' -> return $ toList xs' 12 []
-zs = xs >>= \xs' -> return (MVector.drop 1 xs') >>= \xs'' -> return $ toList xs'' 11 []
-as = xs >>= \xs' -> return (MVector.drop 1 xs') >>= \xs'' -> return $ toListHelper xs'' 3 []
-bs = xs >>= \xs' -> return $ toList' xs'
-cs = xs >>= \xs' -> write xs' 2 1 2 >> write xs' 3 1 3 >> return (toList' xs')
-ds = 
-    xs >>= \xs' -> 
-    write xs' 1 1 1 >>
-    write xs' 2 1 2 >>
-    write xs' 3 1 3 >>
-    write xs' 4 1 4 >>
-    return (toList xs' 12 [])
-es = 
-    xs >>= \xs' -> 
-    write xs' 1 1 1 >>
-    return (toList xs' 12 [])
-fs = 
+xs = constVec 4 3 "0" :: MTDMVector String
+ys = 
     xs >>= \xs' ->
-    write xs' 1 1 1 >>
-    write xs' 2 1 2 >>
-    write xs' 3 1 3 >>
-    write xs' 4 1 4 >>
+    write xs' 1 1 "1" >>
+    write xs' 2 1 "2" >>
+    write xs' 3 1 "3" >>
+    write xs' 4 1 "4" >>
+    write xs' 4 2 "5" >>
     return (toList' xs')
