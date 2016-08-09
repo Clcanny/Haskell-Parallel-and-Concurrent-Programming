@@ -2,7 +2,7 @@ module TwoDimVecImp1 (
       PrimMonad'
     , MTDMVector
     , constVec
-    , read
+    , read'
     , write
     , toList'
 ) where
@@ -44,9 +44,8 @@ read vec col row =
         rowMax = unsafeGetMaxRow $ unsafePerformIO (MVector.read vec 0)
         realIndex = (col - 1) * rowMax + row
 
-read' :: MTDMVector a -> Int -> Int -> a
-read' vec col row =
-    
+read' :: MVector' (MixType a) -> Int -> Int -> a
+read' vec col row = unsafePerformIO $ read vec col row
 
 write :: MVector' (MixType a) -> Int -> Int -> a -> PrimMonad' ()
 write vec col row a = MVector.write vec realIndex (Elem a)
