@@ -45,28 +45,33 @@ readMVar m =
     putMVar m a >>
     return a
 
+unGetChan :: Chan a -> a -> IO ()
+unGetChan (Chan readVar _) val =
+    newEmptyMVar >>= \newReadEnd ->
+    takeMVar readVar >>= \readEnd ->
+    putMVar newReadEnd (Item val readEnd) >>
+    putMVar readVar newReadEnd
+
 -- test
--- ghci, no block
-a = 
+a =
     newChan >>= \chan ->
     writeChan chan 1 >>
-    writeChan chan 2 >>
-    readChan chan >>
+    unGetChan chan 2 >>
     readChan chan
 
-b = 
+b =
     newChan >>= \chan ->
-    dupChan chan >>= \chan' ->
-    writeChan chan 1 >>
-    writeChan chan' 2 >>
-    readChan chan >>
-    readChan chan >>
-    readChan chan' >>
-    readChan chan'
-
--- block
-wrongExample = 
-    newChan >>= \chan ->
-    writeChan chan 1 >>
-    readChan chan >>
+    unGetChan chan 1 >>
     readChan chan
+
+noDeadlock =
+    newChan >>= \chan ->
+    forkIO (readChan chan >> putStrLn "I' m done!") >>
+    forkIO (writeChan chan 1) >>
+    getLine
+
+deadlock =
+    newChan >>= \chan ->
+    forkIO (readChan chan >> putStrLn "I' m done!") >>
+    forkIO (unGetChan chan 1 >> putStrLn "I'm done two.") >>
+    getLine
