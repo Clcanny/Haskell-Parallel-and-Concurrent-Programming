@@ -5,6 +5,7 @@ clean :
 	- rm geturls2
 	- rm geturls3
 	- rm geturls4
+	- rm geturls6
 
 compile1 : geturls1.hs clean
 	ghc -O2 geturls1.hs
@@ -29,3 +30,9 @@ compile4 : geturls4.hs clean
 
 run4 : compile4
 	./geturls4
+
+compile6 : geturls6.hs clean
+	ghc -O2 geturls6.hs
+
+run6 : compile6
+	./geturls6
