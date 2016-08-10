@@ -23,8 +23,8 @@ wait (Async var) = readMVar var
 
 -- <<main
 main = do
-    a1 <- async (getURL "http://www.wikipedia.org/wiki/Shovel")
-    a2 <- async (getURL "http://www.wikipedia.org/wiki/Spade")
+    a1 <- async (getURL "http://www.baidu.com")
+    a2 <- async (getURL "http://www.sohu.com")
     r1 <- wait a1
     r2 <- wait a2
     print (B.length r1, B.length r2)
