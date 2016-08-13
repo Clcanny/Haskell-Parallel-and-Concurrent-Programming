@@ -1,3 +1,9 @@
+module HighLevelMask (
+    modifyMVar_,
+    modifyMVar,
+    bracket
+) where
+
 import Mask (problem')
 import Control.Concurrent.MVar (MVar, putMVar, takeMVar)
 import Control.Exception (SomeException, catch, throw, mask)
