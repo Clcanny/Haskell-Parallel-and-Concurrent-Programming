@@ -64,8 +64,8 @@ mayDeadlock =
     db = Desktop 2
   in
     makeDisplay' [da, db] [[wa], [wb]] >>= \display ->
-    forkIO (moveWindow display wa da db >> print "Done here!") >>
-    forkIO (moveWindow display wb db da >> print "Done here, too!") >>
+    moveWindow display wa da db >> print "Done here!" >>
+    moveWindow display wb db da >> print "Done here, too!" >>
     threadDelay (5 * 10 ^ 6)
 
 main :: IO ()
