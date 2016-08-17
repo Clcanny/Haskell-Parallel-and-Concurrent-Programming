@@ -16,6 +16,7 @@ import Control.Concurrent.STM (STM, retry, atomically, throwSTM, orElse, retry)
 import Control.Concurrent.STM.TVar (TVar, readTVar, writeTVar, newTVar)
 import Control.Concurrent (ThreadId, forkIO)
 import Control.Exception (SomeException, Exception, mask, try, throwIO, throwTo, catch)
+import System.IO.Unsafe (unsafePerformIO)
 
 import GetURL
 import qualified Data.ByteString as B
@@ -32,15 +33,15 @@ instance Exception CancelException
 
 newtype TMVar a = TMVar (TVar (Maybe a))
 
-instance Monad TMVar where
-  return a = TMVar (newTVar (Just a))
-  (TMVar t) >>= f = 
-    let
-      m = unsafePerformIO $ atomically $ readTVar t
-    in
-      case m of
-        Nothing -> Nothing
-        (Just a) -> f a
+-- instance Monad TMVar where
+--   return a = TMVar ((unsafePerformIO . atomically . newTVar) (Just a))
+--   (TMVar t) >>= f = 
+--     let
+--       m = (unsafePerformIO . atomically . readTVar) t
+--     in
+--       case m of
+--         Nothing -> return Nothing
+--         (Just a) -> f a
 
 newEmptyTMVar :: STM (TMVar a)
 newEmptyTMVar = 
@@ -155,13 +156,13 @@ withAsync io operation = bracket (async io) cancel operation
 
 -- >>= Functor Interface
 
-instance Functor Async where
-  fmap f (Async t stm) = Async t stm'
-    where stm' = do
-          r <- stm
-          case r of
-            Left e -> return (Left e)
-            Right a -> return (Right (f a))
+-- instance Functor Async where
+--   fmap f (Async t stm) = Async t stm'
+--     where stm' = do
+--           r <- stm
+--           case r of
+--             Left e -> return (Left e)
+--             Right a -> return (Right (f a))
 
 -- =<< Functor Interface
 main =
