@@ -1,3 +1,17 @@
+module Async (
+    Async(..)
+  , async
+  , cancel
+  , waitCatchSTM
+  , waitCatch
+  , waitSTM
+  , wait
+  , waitEither
+  , waitBoth
+  , race
+  , concurrently
+) where
+
 import Control.Concurrent.STM (STM, retry, atomically, throwSTM, orElse, retry)
 import Control.Concurrent.STM.TVar (TVar, readTVar, writeTVar, newTVar)
 import Control.Concurrent (ThreadId, forkIO)
@@ -17,6 +31,16 @@ instance Exception CancelException
 -- >>= TMVar
 
 newtype TMVar a = TMVar (TVar (Maybe a))
+
+instance Monad TMVar where
+  return a = TMVar (newTVar (Just a))
+  (TMVar t) >>= f = 
+    let
+      m = unsafePerformIO $ atomically $ readTVar t
+    in
+      case m of
+        Nothing -> Nothing
+        (Just a) -> f a
 
 newEmptyTMVar :: STM (TMVar a)
 newEmptyTMVar = 
@@ -96,11 +120,29 @@ waitEither :: Async a -> Async b -> IO (Either a b)
 waitEither a b = atomically $
   fmap Left (waitSTM a) `orElse` fmap Right (waitSTM b)
 
+-- 参照下面的main函数，可以知道：
+-- 如果a1失败，mian函数收到异常，a2也不会继续执行；
+-- 但是，如果a2失败，main函数却会等待a1的结果；
+-- 最坏的情况是a1还是retry。
+-- 所以，waitBoth做了一个改进，如果a1进入retry阶段，会去看一看a2有没有抛出异常。
+-- 保证对称性，具体情况分a1正常得出结果，a1进入retry阶段，a1抛出异常进行讨论。
 waitBoth :: Async a -> Async b -> IO (a, b)
 waitBoth a1 a2 = atomically $
   waitSTM a1 `orElse` (waitSTM a2 >> retry) >>= \r1 ->
   waitSTM a2 >>= \r2 ->
   return (r1, r2)
+
+race :: IO a -> IO b -> IO (Either a b)
+race ioa iob =
+  withAsync ioa $ \a ->
+  withAsync iob $ \b ->
+  waitEither a b
+
+concurrently :: IO a -> IO b -> IO (a,b)
+concurrently ioa iob =
+  withAsync ioa $ \a ->
+  withAsync iob $ \b ->
+  waitBoth a b
 
 waitAny :: [Async a] -> IO a
 waitAny asyncs = atomically $
@@ -111,6 +153,17 @@ withAsync io operation = bracket (async io) cancel operation
 
 -- =<< Async
 
+-- >>= Functor Interface
+
+instance Functor Async where
+  fmap f (Async t stm) = Async t stm'
+    where stm' = do
+          r <- stm
+          case r of
+            Left e -> return (Left e)
+            Right a -> return (Right (f a))
+
+-- =<< Functor Interface
 main =
   withAsync (getURL "http://www.wikipedia.org/wiki/Shovel") $ \a1 ->
   withAsync (getURL "http://www.wikipedia.org/wiki/Spade")  $ \a2 ->
