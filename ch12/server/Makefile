@@ -1,4 +1,4 @@
-object = server4
+object = server2
 
 clean :
 	- rm *.hi

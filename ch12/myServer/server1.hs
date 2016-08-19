@@ -1,3 +1,6 @@
+-- 这个版本的缺点是没有实现handle的管理，
+-- 不能通知所有的客户端，factor已经改变，即该改变静默发生。
+
 import ConcurrentUtils
 import Network
 import Control.Monad

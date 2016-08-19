@@ -1,3 +1,8 @@
+-- 这个版本的问题是getMessage在收到factor改变的消息之后，
+-- 本来要通知所有的talk线程（通过信道），
+-- 但是，这样涉及到信道的管理（添加，删除等），比较麻烦，
+-- 故没有这样实现。
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import ConcurrentUtils (forkFinally)
