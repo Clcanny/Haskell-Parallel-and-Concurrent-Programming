@@ -170,15 +170,15 @@ talk handle server@Server{..} = do
     name <- hGetLine handle
     if null name
       then readName
-      else mask $ \restore -> do        -- <1>
+      else mask $ \restore -> do
              ok <- checkAddClient server name handle
              case ok of
-               Nothing -> restore $ do  -- <2>
+               Nothing -> restore $ do
                   hPrintf handle
                      "The name %s is in use, please choose another\n" name
                   readName
                Just client ->
-                  restore (runClient server client) -- <3>
+                  restore (runClient server client)
                       `finally` removeClient server name
 -- >>
 
