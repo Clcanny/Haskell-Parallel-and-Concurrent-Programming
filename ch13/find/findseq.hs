@@ -15,20 +15,27 @@ main = do
 -- <<find
 find :: String -> FilePath -> IO (Maybe FilePath)
 find s d = do
-  fs <- getDirectoryContents d                         -- <1>
-  let fs' = sort $ filter (`notElem` [".",".."]) fs    -- <2>
-  if any (== s) fs'                                    -- <3>
+  -- getDirectoryContents :: FilePath -> IO [FilePath]
+  fs <- getDirectoryContents d
+  -- filter :: (a -> Bool) -> [a] -> [a]
+  -- 此处假设文件夹和文件名是不可以相同的，即同一文件夹下，只能有一个某名字的文件或子文件夹
+  let fs' = sort $ filter (`notElem` [".",".."]) fs
+  if any (== s) fs'
      then return (Just (d </> s))
-     else loop fs'                                     -- <4>
+     else loop fs'
  where
-  loop [] = return Nothing                             -- <5>
-  loop (f:fs)  = do
-    let d' = d </> f                                   -- <6>
-    isdir <- doesDirectoryExist d'                     -- <7>
+  loop [] = return Nothing
+  loop (f:fs) = do
+    let d' = d </> f
+    isdir <- doesDirectoryExist d'
     if isdir
-       then do r <- find s d'                          -- <8>
+       then do r <- find s d'
                case r of
-                 Just _  -> return r                   -- <9>
-                 Nothing -> loop fs                    -- <10>
-       else loop fs                                    -- <11>
+                 Just _  -> return r
+                 Nothing -> loop fs
+       else loop fs
 -- >>
+
+-- test method
+-- runhaskell findseq.hs findseq.hs ./
+-- runhaskell findseq.hs cantfind.hs ./
