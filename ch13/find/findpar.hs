@@ -1,8 +1,7 @@
 import System.Directory
 import Control.Concurrent
 import System.FilePath
--- import Control.Concurrent.Async
-import Async
+import Control.Concurrent.Async
 import System.Environment
 import Data.List hiding (find)
 
@@ -18,13 +17,13 @@ find s d = do
   if any (== s) fs'
      then return (Just (d </> s))
      else do
-       let ps = map (d </>) fs'
-       foldr (subfind s) dowait ps []
+       let ps = map (d </>) fs'         -- <1>
+       foldr (subfind s) dowait ps []   -- <2>
  where
-   dowait as = loop (reverse as)
+   dowait as = loop (reverse as)        -- <3>
 
    loop [] = return Nothing
-   loop (a:as) = do
+   loop (a:as) = do                     -- <4>
       r <- wait a
       case r of
         Nothing -> loop as
@@ -34,7 +33,7 @@ find s d = do
 -- <<subfind
 subfind :: String -> FilePath
         -> ([Async (Maybe FilePath)] -> IO (Maybe FilePath))
-        -> [Async (Maybe FilePath)] -> IO (Maybe FilePath)
+        ->  [Async (Maybe FilePath)] -> IO (Maybe FilePath)
 
 subfind s p inner asyncs = do
   isdir <- doesDirectoryExist p
@@ -42,7 +41,3 @@ subfind s p inner asyncs = do
      then inner asyncs
      else withAsync (find s p) $ \a -> inner (a:asyncs)
 -- >>
-
--- test method
--- runhaskell findpar.hs findpar.hs ./
--- runhaskell findpar.hs cantfind.hs ./

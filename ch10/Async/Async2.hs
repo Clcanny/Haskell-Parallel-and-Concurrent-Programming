@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP, MagicHash, UnboxedTuples, RankNTypes #-}
+{-# OPTIONS -Wall #-}
 
 -----------------------------------------------------------------------------
 -- This module provides a set of operations for running IO operations
@@ -69,7 +70,7 @@
 
 -----------------------------------------------------------------------------
 
-module Async (
+module Control.Concurrent.Async (
 
     -- * Asynchronous actions
     Async,
@@ -164,7 +165,7 @@ readTMVar (TMVar t) =
 -- operations are provided for waiting for asynchronous actions to
 -- complete and obtaining their results (see e.g. 'wait').
 --
-data Async a = Async { asyncThreadId :: !ThreadId
+data Async a = Async { asyncThreadId :: {-# UNPACK #-} !ThreadId
                        -- ^ Returns the 'ThreadId' of the thread running the given 'Async'.
                      , _asyncWait    :: STM (Either SomeException a) }
 
@@ -263,6 +264,7 @@ withAsyncUsing doFork = \action inner -> do
 --
 -- > wait = atomically . waitSTM
 --
+{-# INLINE wait #-}
 wait :: Async a -> IO a
 wait = atomically . waitSTM
 
@@ -272,6 +274,7 @@ wait = atomically . waitSTM
 --
 -- > waitCatch = atomically . waitCatchSTM
 --
+{-# INLINE waitCatch #-}
 waitCatch :: Async a -> IO (Either SomeException a)
 waitCatch = tryAgain . atomically . waitCatchSTM
   where
@@ -285,6 +288,7 @@ waitCatch = tryAgain . atomically . waitCatchSTM
 --
 -- > poll = atomically . pollSTM
 --
+{-# INLINE poll #-}
 poll :: Async a -> IO (Maybe (Either SomeException a))
 poll = atomically . pollSTM
 
@@ -297,11 +301,13 @@ waitSTM a = do
 
 -- | A version of 'waitCatch' that can be used inside an STM transaction.
 --
+{-# INLINE waitCatchSTM #-}
 waitCatchSTM :: Async a -> STM (Either SomeException a)
 waitCatchSTM (Async _ w) = w
 
 -- | A version of 'poll' that can be used inside an STM transaction.
 --
+{-# INLINE pollSTM #-}
 pollSTM :: Async a -> STM (Maybe (Either SomeException a))
 -- Compose two alternative STM actions (GHC only). If the first action completes
 -- without retrying then it forms the result of the orElse. Otherwise, if the
@@ -323,6 +329,7 @@ pollSTM (Async _ w) = (Just <$> w) `orElse` return Nothing
 -- 'cancel' may block indefinitely. An asynchronous 'cancel' can
 -- of course be obtained by wrapping 'cancel' itself in 'async'.
 --
+{-# INLINE cancel #-}
 cancel :: Async a -> IO ()
 cancel (Async t _) = throwTo t ThreadKilled
 
@@ -343,6 +350,7 @@ cancelWith (Async t _) e = throwTo t e
 -- If multiple 'Async's complete or have completed, then the value
 -- returned corresponds to the first completed 'Async' in the list.
 --
+{-# INLINE waitAnyCatch #-}
 waitAnyCatch :: [Async a] -> IO (Async a, Either SomeException a)
 waitAnyCatch = atomically . waitAnyCatchSTM
 
@@ -368,6 +376,7 @@ waitAnyCatchCancel asyncs =
 -- If multiple 'Async's complete or have completed, then the value
 -- returned corresponds to the first completed 'Async' in the list.
 --
+{-# INLINE waitAny #-}
 waitAny :: [Async a] -> IO (Async a, a)
 waitAny = atomically . waitAnySTM
 
@@ -387,6 +396,7 @@ waitAnyCancel asyncs =
   waitAny asyncs `finally` mapM_ cancel asyncs
 
 -- | Wait for the first of two @Async@s to finish.
+{-# INLINE waitEitherCatch #-}
 waitEitherCatch :: Async a -> Async b
                 -> IO (Either (Either SomeException a)
                               (Either SomeException b))
@@ -416,6 +426,7 @@ waitEitherCatchCancel left right =
 -- that finished first raised an exception, then the exception is
 -- re-thrown by 'waitEither'.
 --
+{-# INLINE waitEither #-}
 waitEither :: Async a -> Async b -> IO (Either a b)
 waitEither left right = atomically (waitEitherSTM left right)
 
@@ -430,6 +441,7 @@ waitEitherSTM left right =
 
 -- | Like 'waitEither', but the result is ignored.
 --
+{-# INLINE waitEither_ #-}
 waitEither_ :: Async a -> Async b -> IO ()
 waitEither_ left right = atomically (waitEitherSTM_ left right)
 
@@ -453,6 +465,7 @@ waitEitherCancel left right =
 -- an exception before they have both finished, then the exception is
 -- re-thrown by 'waitBoth'.
 --
+{-# INLINE waitBoth #-}
 waitBoth :: Async a -> Async b -> IO (a,b)
 waitBoth left right = atomically (waitBothSTM left right)
 
@@ -521,6 +534,10 @@ race_ :: IO a -> IO b -> IO ()
 -- >   waitBoth a b
 concurrently :: IO a -> IO b -> IO (a,b)
 
+#define USE_ASYNC_VERSIONS 0
+
+#if USE_ASYNC_VERSIONS
+
 race left right =
   withAsync left $ \a ->
   withAsync right $ \b ->
@@ -536,6 +553,52 @@ concurrently left right =
   withAsync right $ \b ->
   waitBoth a b
 
+#else
+
+-- MVar versions of race/concurrently
+-- More ugly than the Async versions, but quite a bit faster.
+
+-- race :: IO a -> IO b -> IO (Either a b)
+race left right = concurrently' left right collect
+  where
+    collect m = do
+        e <- takeMVar m
+        case e of
+            Left ex -> throwIO ex
+            Right r -> return r
+
+-- race_ :: IO a -> IO b -> IO ()
+race_ left right = void $ race left right
+
+-- concurrently :: IO a -> IO b -> IO (a,b)
+concurrently left right = concurrently' left right (collect [])
+  where
+    collect [Left a, Right b] _ = return (a,b)
+    collect [Right b, Left a] _ = return (a,b)
+    collect xs m = do
+        e <- takeMVar m
+        case e of
+            Left ex -> throwIO ex
+            Right r -> collect (r:xs) m
+
+concurrently' :: IO a -> IO b
+             -> (MVar (Either SomeException (Either a b)) -> IO r)
+             -> IO r
+concurrently' left right collect = do
+    done <- newEmptyMVar
+    mask $ \restore -> do
+        lid <- forkIO $ restore (left >>= putMVar done . Right . Left)
+                             `catchAll` (putMVar done . Left)
+        rid <- forkIO $ restore (right >>= putMVar done . Right . Right)
+                             `catchAll` (putMVar done . Left)
+        let stop = killThread rid >> killThread lid
+                   -- kill right before left, to match the semantics of
+                   -- the version using withAsync. (#27)
+        r <- restore (collect done) `onException` stop
+        stop
+        return r
+
+#endif
 
 -- | maps an @IO@-performing function over any @Traversable@ data
 -- type, performing all the @IO@ actions concurrently, and returning
@@ -618,10 +681,12 @@ tryAll = try
 -- A version of forkIO that does not include the outer exception
 -- handler: saves a bit of time when we will be installing our own
 -- exception handler.
+{-# INLINE rawForkIO #-}
 rawForkIO :: IO () -> IO ThreadId
 rawForkIO action = IO $ \ s ->
    case (fork# action s) of (# s1, tid #) -> (# s1, ThreadId tid #)
 
+{-# INLINE rawForkOn #-}
 rawForkOn :: Int -> IO () -> IO ThreadId
 rawForkOn (I# cpu) action = IO $ \ s ->
    case (forkOn# cpu action s) of (# s1, tid #) -> (# s1, ThreadId tid #)
