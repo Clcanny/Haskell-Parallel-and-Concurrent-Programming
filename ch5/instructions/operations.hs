@@ -30,7 +30,7 @@ cArr = computeS mArr
 -- ever building the intermediate arrays; this is an optimization called fusion, and it’s
 -- critical to achieving good performance with Repa.
 noIntermediateArray = computeS (Repa.map (+ 1) (Repa.map (^ 2) arr)) :: Array U DIM1 Int
--- The intermediate array between the two map s is not built, and in fact if we compile this
+-- The intermediate array between the two maps is not built, and in fact if we compile this
 -- rather than running it in GHCi, provided the optimization option -O is enabled, it will
 -- compile to a single efficient loop over the input array.
 
