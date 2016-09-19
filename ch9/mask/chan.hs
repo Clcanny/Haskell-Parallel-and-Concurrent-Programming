@@ -58,6 +58,13 @@ readMVar m =
     putMVar m a >>
     return a
 
+readMVar' :: MVar a -> IO a
+readMVar' m =
+  mask_ $
+    takeMVar m >>= \a ->
+    putMVar m a >>
+    return a
+
 unGetChan :: Chan a -> a -> IO ()
 unGetChan (Chan readVar _) val =
     newEmptyMVar >>= \newReadEnd ->
